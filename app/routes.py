@@ -1,35 +1,126 @@
-from flask import Flask, redirect, url_for, session
+from flask import Flask, redirect, url_for, session, render_template, request, jsonify, send_from_directory
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# OAUTH IMPORTS - ADDED FOR GOOGLE AUTHENTICATION
 from authlib.integrations.flask_client import OAuth
+from functools import wraps
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 import os
-from datetime import timedelta
-from flask import (Flask, request, jsonify, redirect, render_template, send_from_directory, url_for)
-from datetime import datetime
+from datetime import timedelta, datetime
 import traceback
-import os
 from app.database import (insert_metric, get_all_metrics, get_client_metrics, get_total_clients, get_total_metrics, get_client_list)
 from app.charts import generate_charts
 from utils.logger import setup_logger
 from dotenv import load_dotenv
+
 load_dotenv()
 logger = setup_logger()
+
 app = Flask(__name__)
-WHITELIST = {"costindylan@gmail.com","i569540@fontysict.nl", "569540@student.fontys.nl", "ADMIN0525ADMIN"}
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# SESSION AND OAUTH CONFIGURATION - ADDED FOR GOOGLE AUTHENTICATION
+app.secret_key = os.getenv("APP_SECRET_KEY")
+app.config['SESSION_COOKIE_NAME'] = 'google-login-session'
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
+
+# OAuth Setup
+oauth = OAuth(app)
+oauth.register(
+    name='google',
+    client_id=os.getenv("GOOGLE_CLIENT_ID"),
+    client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
+    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+    client_kwargs={'scope': 'openid email profile'}
+)
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+WHITELIST = {"costindylan@gmail.com", "i569540@fontysict.nl", "569540@student.fontys.nl"}
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# LOGIN DECORATOR - ADDED FOR AUTHENTICATION AND WHITELIST CHECKING
+def login_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if 'profile' not in session:
+            return redirect(url_for('login'))
+        # Check if user's email is in whitelist
+        user_email = session['profile'].get('email')
+        if user_email not in WHITELIST:
+            return "Access denied. Your email is not authorized.", 403
+        return f(*args, **kwargs)
+    return decorated
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
 def register_routes(app):    
     """Register all routes with the Flask app."""
+    
+    #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    # MODIFIED - ADDED @login_required DECORATOR AND user_email PARAMETER
+    #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     @app.route('/')
+    @login_required
     def verify():
         print('Request for verification page received')
-        return render_template('verify.html')
+        user_email = session['profile']['email']
+        return render_template('verify.html', user_email=user_email)
+    #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    # END MODIFICATIONS
+    #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+    #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    # NEW OAUTH ROUTES - ADDED FOR GOOGLE AUTHENTICATION
+    #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    @app.route('/login')
+    def login():
+        redirect_uri = url_for('authorize', _external=True)
+        return oauth.google.authorize_redirect(redirect_uri)
+
+    @app.route('/authorize')
+    def authorize():
+        token = oauth.google.authorize_access_token()
+        user_info = oauth.google.parse_id_token(token)
+        session['profile'] = user_info
+        session.permanent = True
+        
+        # Check if user is in whitelist
+        if user_info.get('email') not in WHITELIST:
+            session.clear()
+            return "Access denied. Your email is not authorized to access this application.", 403
+        
+        return redirect('/')
+
+    @app.route('/logout')
+    def logout():
+        session.clear()
+        return redirect(url_for('login'))
+    #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    # END NEW OAUTH ROUTES
+    #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+    #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    # MODIFIED - ADDED @login_required DECORATOR AND logged_in_email PARAMETER
+    #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     @app.route('/hello', methods=['POST'])
+    @login_required
     def hello():
         name = request.form.get('name')
+        logged_in_email = session['profile']['email']
+        
         if name and name in WHITELIST:
             print(f"Request for hello page received with allowed name={name}")
-            return render_template('hello.html', name=name)
+            return render_template('hello.html', name=name, logged_in_email=logged_in_email)
         else:
             print(f"Request for hello page received with disallowed or blank name={name} -- redirecting")
-            return redirect(url_for('index'))
+            return redirect(url_for('verify'))
+    #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    # END MODIFICATIONS
+    #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    
+    #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    # MODIFIED - ADDED @login_required DECORATOR AND user_email PARAMETER
+    #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     @app.route('/dashboard')
+    @login_required
     def dashboard():
         """Display the metrics dashboard."""
         try:
@@ -42,6 +133,7 @@ def register_routes(app):
             total_clients = get_total_clients()
             total_metrics = get_total_metrics()
             base_url = request.url_root.rstrip('/')
+            user_email = session['profile']['email']
             
             logger.info("✓ Dashboard rendered successfully")
             
@@ -52,12 +144,16 @@ def register_routes(app):
                 charts=charts,
                 total_clients=total_clients,
                 total_metrics=total_metrics,
-                base_url=base_url
+                base_url=base_url,
+                user_email=user_email
             )
         except Exception as e:
             logger.error(f"✗ Dashboard route failed: {str(e)}")
             logger.error(traceback.format_exc())
             return f"Dashboard Error: {str(e)}", 500
+    #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    # END MODIFICATIONS
+    #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     
     @app.route('/api/metrics', methods=['POST'])
     def receive_metrics():
