@@ -14,12 +14,7 @@ load_dotenv()
 logger = setup_logger()
 app = Flask(__name__)
 WHITELIST = {"costindylan@gmail.com","i569540@fontysict.nl", "569540@student.fontys.nl", "ADMIN0525ADMIN"}
-def register_routes(app):
-    @app.route('/')
-    def index():
-        """Render the index page."""
-        return render_template('index.html')
-    
+def register_routes(app):    
     """Register all routes with the Flask app."""
     @app.route('/verify')
     def verify():
