@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Hello user - Python Quickstart</title>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .text-center {
+            text-align: center;
+        }
+
+        h1 {
+            color: #333;
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin: 0 0 20px 0;
+        }
+        .intro-text {
+            font-size: 1.25rem;
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        .info-section {
+            background-color: #f0f9ff;
+            border: 2px solid #0ea5e9;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 30px;
+            text-align: left;
+        }
+        .info-section h2 {
+            margin-top: 0;
+            color: #0369a1;
+            font-size: 1.5rem;
+        }
+        .info-section p {
+            color: #334155;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <main class="text-center">
+            <h1>Hello {{name}}</h1>
+            <p class="intro-text">
+                It is nice to meet you!
+            </p>
+            <a href="{{ url_for('dashboard') }}" class="btn-primary">Continue</a>
+            
+            <div class="info-section">
+                <h2>Welcome to Python Quickstart</h2>
+                <p>
+                    This is your starting point for exploring the application. 
+                    Click the "Continue" button above to proceed to your dashboard 
+                    where you can access all available features and functionality.
+                </p>
+            </div>
+        </main>
+    </div>
+</body>
+</html>
