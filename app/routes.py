@@ -38,7 +38,7 @@ def login_required(f):
 def register_routes(app):    
     """Register all routes with the Flask app."""
     
-    #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     # SESSION AND OAUTH CONFIGURATION - ADDED FOR GOOGLE AUTHENTICATION
     # MUST BE SET FIRST BEFORE ANY ROUTES USE SESSIONS
     #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
