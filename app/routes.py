@@ -17,7 +17,7 @@ logger = setup_logger()
 
 app = Flask(__name__)
 
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # SESSION AND OAUTH CONFIGURATION - ADDED FOR GOOGLE AUTHENTICATION
 app.secret_key = os.getenv("APP_SECRET_KEY")
 app.config['SESSION_COOKIE_NAME'] = 'google-login-session'
