@@ -12,26 +12,13 @@ from dotenv import load_dotenv
 load_dotenv()
 logger = setup_logger()
 
-app = Flask(__name__)
-
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# SESSION AND OAUTH CONFIGURATION - ADDED FOR GOOGLE AUTHENTICATION
-app.secret_key = "super-secret-key-for-testing-12345"  # HARDCODED FOR TESTING ONLY
-app.config['SESSION_COOKIE_NAME'] = 'google-login-session'
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
-
-# OAuth Setup
-oauth = OAuth(app)
-oauth.register(
-    name='google',
-    client_id=os.getenv("GOOGLE_CLIENT_ID"),
-    client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
-    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
-    client_kwargs={'scope': 'openid email profile'}
-)
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
 WHITELIST = {"costindylan@gmail.com", "i569540@fontysict.nl", "569540@student.fontys.nl"}
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# SESSION AND OAUTH CONFIGURATION - THESE NEED TO BE SET ON THE APP OBJECT
+# NOTE: This assumes 'app' is passed into register_routes(app)
+# The secret_key and OAuth setup will be done inside register_routes
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # LOGIN DECORATOR - ADDED FOR AUTHENTICATION AND WHITELIST CHECKING
@@ -50,6 +37,27 @@ def login_required(f):
 
 def register_routes(app):    
     """Register all routes with the Flask app."""
+    
+    #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    # SESSION AND OAUTH CONFIGURATION - ADDED FOR GOOGLE AUTHENTICATION
+    # MUST BE SET FIRST BEFORE ANY ROUTES USE SESSIONS
+    #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    app.secret_key = "super-secret-key-for-testing-12345"  # HARDCODED FOR TESTING ONLY
+    app.config['SESSION_COOKIE_NAME'] = 'google-login-session'
+    app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
+    
+    # OAuth Setup
+    oauth = OAuth(app)
+    oauth.register(
+        name='google',
+        client_id=os.getenv("GOOGLE_CLIENT_ID"),
+        client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
+        server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+        client_kwargs={'scope': 'openid email profile'}
+    )
+    #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    # END OAUTH CONFIGURATION
+    #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     
     #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     # MODIFIED - ADDED @login_required DECORATOR AND user_email PARAMETER
