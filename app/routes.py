@@ -38,15 +38,17 @@ def login_required(f):
 def register_routes(app):    
     """Register all routes with the Flask app."""
     
-    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     # SESSION AND OAUTH CONFIGURATION - ADDED FOR GOOGLE AUTHENTICATION
     # MUST BE SET FIRST BEFORE ANY ROUTES USE SESSIONS
     #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    global oauth  # Use the global oauth variable
+    
     app.secret_key = "super-secret-key-for-testing-12345"  # HARDCODED FOR TESTING ONLY
     app.config['SESSION_COOKIE_NAME'] = 'google-login-session'
     app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
     
-    # OAuth Setup
+    # OAuth Setup - Initialize the global oauth object
     oauth = OAuth(app)
     oauth.register(
         name='google',
@@ -55,6 +57,10 @@ def register_routes(app):
         server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
         client_kwargs={'scope': 'openid email profile'}
     )
+    
+    # IMPORTANT: Verify your credentials are loaded
+    print(f"OAuth Client ID: {os.getenv('GOOGLE_CLIENT_ID')[:20]}..." if os.getenv('GOOGLE_CLIENT_ID') else "WARNING: No Client ID found!")
+    print(f"OAuth Client Secret: {'*' * 20}" if os.getenv('GOOGLE_CLIENT_SECRET') else "WARNING: No Client Secret found!")
     #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     # END OAUTH CONFIGURATION
     #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
