@@ -73,7 +73,7 @@ def register_routes(app):
         logger.info("=" * 60)
         
         google = oauth.create_client('google')
-        redirect_uri = url_for('authorize', _external=True)
+        redirect_uri = url_for('authorize', _external=True, _scheme='https')
         
         logger.info(f"Redirect URI: {redirect_uri}")
         logger.info(f"Request URL: {request.url}")
