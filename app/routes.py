@@ -39,8 +39,8 @@ def register_routes(app):
     
     #=================================================================
     # OAuth Setup with Debug Logging
-    client_id = os.getenv("GOOGLE_CLIENT_ID")
-    client_secret = os.getenv("GOOGLE_CLIENT_SECRET")
+    client_id = "782202043868-0aocol0tt7grrk6f5f9o0dqgcifjt81h.apps.googleusercontent.com"
+    client_secret = "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"
     
     logger.info("=" * 60)
     logger.info("OAUTH CONFIGURATION DEBUG")
