@@ -38,12 +38,24 @@ def register_routes(app):
         app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=5)
     
     #=================================================================
-    # OAuth Setup
+    # OAuth Setup with Debug Logging
+    client_id = os.getenv("GOOGLE_CLIENT_ID")
+    client_secret = os.getenv("GOOGLE_CLIENT_SECRET")
+    
+    logger.info("=" * 60)
+    logger.info("OAUTH CONFIGURATION DEBUG")
+    logger.info("=" * 60)
+    logger.info(f"CLIENT_ID exists: {bool(client_id)}")
+    logger.info(f"CLIENT_ID value: {client_id[:20] if client_id else 'NOT SET'}...")
+    logger.info(f"CLIENT_SECRET exists: {bool(client_secret)}")
+    logger.info(f"CLIENT_SECRET length: {len(client_secret) if client_secret else 0}")
+    logger.info("=" * 60)
+    
     oauth = OAuth(app)
     google = oauth.register(
         name='google',
-        client_id=os.getenv("GOOGLE_CLIENT_ID"),
-        client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
+        client_id=client_id,
+        client_secret=client_secret,
         access_token_url='https://accounts.google.com/o/oauth2/token',
         access_token_params=None,
         authorize_url='https://accounts.google.com/o/oauth2/auth',
@@ -56,20 +68,66 @@ def register_routes(app):
     
     @app.route('/login')
     def login():
+        logger.info("=" * 60)
+        logger.info("LOGIN ROUTE ACCESSED")
+        logger.info("=" * 60)
+        
         google = oauth.create_client('google')
         redirect_uri = url_for('authorize', _external=True)
+        
+        logger.info(f"Redirect URI: {redirect_uri}")
+        logger.info(f"Request URL: {request.url}")
+        logger.info(f"Request Host: {request.host}")
+        logger.info("=" * 60)
+        
         return google.authorize_redirect(redirect_uri)
     
     @app.route('/authorize')
     def authorize():
-        google = oauth.create_client('google')
-        token = google.authorize_access_token()
-        resp = google.get('userinfo')
-        user_info = resp.json()
-        user = oauth.google.userinfo()
-        session['profile'] = user_info
-        session.permanent = True
-        return redirect('/')
+        logger.info("=" * 60)
+        logger.info("AUTHORIZE CALLBACK RECEIVED")
+        logger.info("=" * 60)
+        logger.info(f"Request URL: {request.url}")
+        logger.info(f"Request args: {request.args}")
+        logger.info(f"Has 'code' param: {'code' in request.args}")
+        logger.info(f"Has 'state' param: {'state' in request.args}")
+        logger.info(f"Has 'error' param: {'error' in request.args}")
+        
+        if 'error' in request.args:
+            logger.error(f"OAuth Error: {request.args.get('error')}")
+            logger.error(f"Error description: {request.args.get('error_description')}")
+            return f"OAuth Error: {request.args.get('error_description', 'Unknown error')}", 400
+        
+        logger.info(f"CLIENT_ID being used: {os.getenv('GOOGLE_CLIENT_ID')[:20]}...")
+        logger.info(f"CLIENT_SECRET exists: {bool(os.getenv('GOOGLE_CLIENT_SECRET'))}")
+        logger.info("=" * 60)
+        
+        try:
+            google = oauth.create_client('google')
+            logger.info("Attempting to exchange authorization code for token...")
+            token = google.authorize_access_token()
+            logger.info("✓ Token exchange successful!")
+            
+            resp = google.get('userinfo')
+            user_info = resp.json()
+            logger.info(f"✓ User info retrieved: {user_info.get('email')}")
+            
+            user = oauth.google.userinfo()
+            session['profile'] = user_info
+            session.permanent = True
+            
+            logger.info("✓ Session created, redirecting to home")
+            logger.info("=" * 60)
+            return redirect('/')
+            
+        except Exception as e:
+            logger.error("=" * 60)
+            logger.error("AUTHORIZATION FAILED")
+            logger.error(f"Error type: {type(e).__name__}")
+            logger.error(f"Error message: {str(e)}")
+            logger.error(traceback.format_exc())
+            logger.error("=" * 60)
+            raise
     
     @app.route('/logout')
     def logout():
