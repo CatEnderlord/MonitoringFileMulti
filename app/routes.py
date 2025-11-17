@@ -89,7 +89,9 @@ def register_routes(app):
     @app.route('/authorize')
     def authorize():
         token = oauth.google.authorize_access_token()
+        print(f"OAuth token received: {token}")
         user_info = oauth.google.parse_id_token(token)
+        print(f"User info retrieved: {user_info}")
         session['profile'] = user_info
         session.permanent = True
         
