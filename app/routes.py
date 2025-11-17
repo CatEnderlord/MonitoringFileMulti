@@ -14,13 +14,6 @@ from dotenv import load_dotenv
 load_dotenv()
 logger = setup_logger()
 
-app = Flask(__name__)
-
-# Session config
-app.secret_key = "super-secret-key-for-testing-12345"
-app.config['SESSION_COOKIE_NAME'] = 'google-login-session'
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=5)
-
 WHITELIST = {"costindylan@gmail.com","i569540@fontysict.nl", "569540@student.fontys.nl", "ADMIN0525ADMIN"}
 
 # Login required decorator
@@ -37,6 +30,13 @@ def login_required(function):
 
 def register_routes(app):
     """Register all routes with the Flask app."""
+    
+    # Ensure secret key is set on the app
+    if not app.secret_key:
+        app.secret_key = "super-secret-key-for-testing-12345"
+        app.config['SESSION_COOKIE_NAME'] = 'google-login-session'
+        app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=5)
+    
     #=================================================================
     # OAuth Setup
     oauth = OAuth(app)
