@@ -161,7 +161,7 @@ def register_routes(app):
         try:
             logger.info("Dashboard route accessed")
             
-            all_metrics = get_all_metrics(limit=50)
+            all_metrics = get_all_metrics(limit=10)
             latest = all_metrics[0] if all_metrics else None
             recent_metrics = list(reversed(get_client_metrics(limit=20)))
             charts = generate_charts(recent_metrics)
