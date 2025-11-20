@@ -45,6 +45,17 @@
             border-radius: 6px;
             overflow-x: auto;
         }
+        .security-notice {
+            background-color: #fef3c7;
+            border: 2px solid #f59e0b;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .security-notice h3 {
+            margin-top: 0;
+            color: #92400e;
+        }
         .stats {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -130,20 +141,107 @@
         .no-data h2 {
             color: #999;
         }
+        .method-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .method-tab {
+            padding: 10px 20px;
+            background-color: #e5e7eb;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .method-tab.active {
+            background-color: #0ea5e9;
+            color: white;
+        }
+        .method-content {
+            display: none;
+        }
+        .method-content.active {
+            display: block;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>System Metrics Dashboard</h1>
         
+        <div class="security-notice">
+            <h3>🔒 Authentication Required</h3>
+            <p><strong>Important:</strong> An API key is now required to submit metrics. Contact your administrator to obtain your API key.</p>
+        </div>
+
         <div class="api-info">
-            <h2>How to Send Metrics</h2>
+            <h2>How to Send Metrics (with Authentication)</h2>
             <p>Send metrics to this dashboard via POST request:</p>
             <p><strong>Endpoint:</strong> <code>POST {{ base_url }}/api/metrics</code></p>
-            <p><strong>Example Python Code:</strong></p>
-            <pre>import requests
+            <p><strong>Authentication:</strong> API Key required (contact admin)</p>
+            
+            <div class="method-tabs">
+                <button class="method-tab active" onclick="showMethod('json')">Method 1: API Key in JSON</button>
+                <button class="method-tab" onclick="showMethod('header')">Method 2: API Key in Header (Recommended)</button>
+            </div>
+
+            <div id="json-method" class="method-content active">
+                <p><strong>Method 1: Include API Key in JSON Body</strong></p>
+                <pre>import requests
 import psutil
 from datetime import datetime
+
+# YOUR API KEY (keep this secret!)
+API_KEY = "your-api-key-here"
+
+def send_metrics():
+    metrics = {
+        'api_key': API_KEY,  # <-- API key included in body
+        'timestamp': datetime.now().isoformat(),
+        'cpu_percent': psutil.cpu_percent(interval=1),
+        'ram': {
+            'used_gb': psutil.virtual_memory().used / (1024**3),
+            'total_gb': psutil.virtual_memory().total / (1024**3),
+            'percent': psutil.virtual_memory().percent
+        },
+        'client_name': 'My Computer',  # Optional identifier
+        'gpu_percent': None,  # Optional: Add GPU monitoring
+        'ping_ms': None,  # Optional: Add ping monitoring
+        'internet_connected': True  # Optional: Internet status
+    }
+    
+    try:
+        response = requests.post(
+            '{{ base_url }}/api/metrics',
+            json=metrics,
+            timeout=10
+        )
+        
+        if response.status_code == 200:
+            print(f"✓ Metrics sent successfully: {response.json()}")
+        else:
+            print(f"✗ Error: {response.status_code} - {response.json()}")
+    
+    except requests.exceptions.RequestException as e:
+        print(f"✗ Failed to send metrics: {e}")
+
+# Run every 5 seconds
+import time
+while True:
+    send_metrics()
+    time.sleep(5)</pre>
+            </div>
+
+            <div id="header-method" class="method-content">
+                <p><strong>Method 2: Include API Key in HTTP Header (More Secure)</strong></p>
+                <pre>import requests
+import psutil
+from datetime import datetime
+
+# YOUR API KEY (keep this secret!)
+API_KEY = "your-api-key-here"
+
 def send_metrics():
     metrics = {
         'timestamp': datetime.now().isoformat(),
@@ -153,20 +251,57 @@ def send_metrics():
             'total_gb': psutil.virtual_memory().total / (1024**3),
             'percent': psutil.virtual_memory().percent
         },
-        'client_name': 'My Computer'  # Optional identifier
+        'client_name': 'My Computer',  # Optional identifier
+        'gpu_percent': None,  # Optional: Add GPU monitoring
+        'ping_ms': None,  # Optional: Add ping monitoring
+        'internet_connected': True  # Optional: Internet status
     }
     
-    response = requests.post(
-        '{{ base_url }}/api/metrics',
-        json=metrics
-    )
-    print(response.json())
+    # API key sent in header instead of body
+    headers = {
+        'X-API-Key': API_KEY,  # <-- API key in header
+        'Content-Type': 'application/json'
+    }
+    
+    try:
+        response = requests.post(
+            '{{ base_url }}/api/metrics',
+            json=metrics,
+            headers=headers,
+            timeout=10
+        )
+        
+        if response.status_code == 200:
+            print(f"✓ Metrics sent successfully: {response.json()}")
+        elif response.status_code == 401:
+            print(f"✗ Authentication failed: No API key provided")
+        elif response.status_code == 403:
+            print(f"✗ Authentication failed: Invalid API key")
+        else:
+            print(f"✗ Error: {response.status_code} - {response.json()}")
+    
+    except requests.exceptions.RequestException as e:
+        print(f"✗ Failed to send metrics: {e}")
+
 # Run every 5 seconds
 import time
 while True:
     send_metrics()
     time.sleep(5)</pre>
+            </div>
+
+            <div style="margin-top: 20px; padding: 15px; background-color: #fef3c7; border-radius: 6px;">
+                <h4 style="margin-top: 0;">🔐 Security Best Practices:</h4>
+                <ul style="margin-bottom: 0;">
+                    <li><strong>Never commit your API key to Git</strong> - Use environment variables</li>
+                    <li><strong>Use HTTPS</strong> - API keys should never be sent over HTTP</li>
+                    <li><strong>Rotate keys regularly</strong> - Change your API key periodically</li>
+                    <li><strong>Use header method</strong> - Sending keys in headers is more secure than in body</li>
+                    <li><strong>Keep keys secret</strong> - Don't share your API key with unauthorized users</li>
+                </ul>
+            </div>
         </div>
+
         {% if metrics %}
         {% if latest_metrics %}
         <div class="stats">
@@ -247,9 +382,25 @@ while True:
         <div class="no-data">
             <h2>No Metrics Yet</h2>
             <p>Waiting for clients to send data...</p>
-            <p>Use the API endpoint above to start sending metrics.</p>
+            <p>Use the API endpoint above to start sending metrics with your API key.</p>
         </div>
         {% endif %}
     </div>
+
+    <script>
+        function showMethod(method) {
+            // Hide all methods
+            document.querySelectorAll('.method-content').forEach(el => {
+                el.classList.remove('active');
+            });
+            document.querySelectorAll('.method-tab').forEach(el => {
+                el.classList.remove('active');
+            });
+            
+            // Show selected method
+            document.getElementById(method + '-method').classList.add('active');
+            event.target.classList.add('active');
+        }
+    </script>
 </body>
 </html>

@@ -9,6 +9,7 @@ import os
 from app.database import (insert_metric, get_all_metrics, get_client_metrics, get_total_clients, get_total_metrics, get_client_list)
 from app.charts import generate_charts
 from utils.logger import setup_logger
+from config import Config
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -196,10 +197,39 @@ def register_routes(app):
                 logger.warning("✗ No data provided in request")
                 return jsonify({'error': 'No data provided'}), 400
             
+            # ============================================================
+            # API KEY AUTHENTICATION
+            # ============================================================
+            # Check for API key in JSON body or HTTP header
+            api_key = data.get('api_key') or request.headers.get('X-API-Key')
+            
+            if not api_key:
+                logger.warning(f"✗ No API key provided from {request.remote_addr}")
+                return jsonify({
+                    'error': 'API key required',
+                    'message': 'Please provide api_key in request body or X-API-Key header'
+                }), 401
+            
+            # Validate API key against configured secret
+            if api_key != Config.API_SECRET_KEY:
+                logger.warning(f"✗ Invalid API key attempt from {request.remote_addr}")
+                return jsonify({
+                    'error': 'Invalid API key',
+                    'message': 'The provided API key is not authorized'
+                }), 403
+            
+            # Remove api_key from data before storing (security best practice)
+            data.pop('api_key', None)
+            
+            logger.info(f"✓ API key validated for {request.remote_addr}")
+            # ============================================================
+            # END API KEY AUTHENTICATION
+            # ============================================================
+            
             data['received_at'] = datetime.now().isoformat()
             client_id = data.get('client_name') or data.get('client_id') or request.remote_addr
             
-            logger.info(f"Processing metrics from client: {client_id}")
+            logger.info(f"Processing metrics from authenticated client: {client_id}")
             
             insert_metric(client_id, data)
             
@@ -217,6 +247,7 @@ def register_routes(app):
             return jsonify({'error': str(e)}), 500
     
     @app.route('/api/metrics', methods=['GET'])
+    @login_required
     def get_metrics():
         """API endpoint to retrieve stored metrics."""
         try:
@@ -238,6 +269,7 @@ def register_routes(app):
             return jsonify({'error': str(e)}), 500
     
     @app.route('/api/clients', methods=['GET'])
+    @login_required
     def get_clients():
         """API endpoint to get list of connected clients."""
         try:
