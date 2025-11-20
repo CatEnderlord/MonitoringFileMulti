@@ -2,7 +2,7 @@ import os
 
 class Config:
     """Configuration class for Flask application."""
-    API_SECRET_KEY = os.environ.get('API_SECRET_KEY', 'your-default-secret-key-change-in-production')
+    API_SECRET_KEY = "SuperSecretKey123!"
     # Detect environment (Azure sets WEBSITE_INSTANCE_ID)
     IS_AZURE = os.environ.get('WEBSITE_INSTANCE_ID') is not None
     
