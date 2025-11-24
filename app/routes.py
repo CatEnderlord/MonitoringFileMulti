@@ -178,7 +178,8 @@ def register_routes(app):
                 charts=charts,
                 total_clients=total_clients,
                 total_metrics=total_metrics,
-                base_url=base_url
+                base_url=base_url,
+                api_secret_key=Config.API_SECRET_KEY
             )
         except Exception as e:
             logger.error(f"✗ Dashboard route failed: {str(e)}")
