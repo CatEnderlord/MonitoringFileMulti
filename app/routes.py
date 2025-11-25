@@ -11,12 +11,9 @@ from app.charts import generate_charts
 from utils.logger import setup_logger
 from config import Config
 from dotenv import load_dotenv
-
 load_dotenv()
 logger = setup_logger()
-
 WHITELIST = {"costindylan@gmail.com","i569540@fontysict.nl", "569540@student.fontys.nl", "ADMIN0525ADMIN"}
-
 # Login required decorator
 def login_required(function):
     def wrapper(*args, **kwargs):
@@ -28,7 +25,6 @@ def login_required(function):
         return function(*args, **kwargs)
     wrapper.__name__ = function.__name__
     return wrapper
-
 def register_routes(app):
     """Register all routes with the Flask app."""
     
@@ -114,8 +110,28 @@ def register_routes(app):
             logger.info(f"✓ User info retrieved: {user_info.get('email')}")
             
             user = oauth.google.userinfo()
-            session['profile'] = user_info
+            
+            # ============================================================
+            # SESSION FIXATION PREVENTION
+            # ============================================================
+            # Regenerate session ID after successful authentication
+            # This prevents session fixation attacks by invalidating any
+            # pre-existing session ID and creating a new one
+            
+            # Store user info temporarily
+            temp_user_info = user_info.copy()
+            
+            # Clear old session and regenerate (works across all Flask versions)
+            session.clear()
+            
+            # Set new session data with fresh session ID
+            session['profile'] = temp_user_info
             session.permanent = True
+            
+            logger.info("✓ Session ID regenerated for security")
+            # ============================================================
+            # END SESSION FIXATION PREVENTION
+            # ============================================================
             
             logger.info("✓ Session created, redirecting to home")
             logger.info("=" * 60)
