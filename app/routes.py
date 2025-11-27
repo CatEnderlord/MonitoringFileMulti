@@ -14,6 +14,7 @@ from dotenv import load_dotenv
 load_dotenv()
 logger = setup_logger()
 WHITELIST = {"costindylan@gmail.com","i569540@fontysict.nl", "569540@student.fontys.nl", "ADMIN0525ADMIN"}
+
 # Login required decorator
 def login_required(function):
     def wrapper(*args, **kwargs):
@@ -25,6 +26,18 @@ def login_required(function):
         return function(*args, **kwargs)
     wrapper.__name__ = function.__name__
     return wrapper
+
+# NEW: Whitelist name verification decorator
+def whitelist_name_required(function):
+    def wrapper(*args, **kwargs):
+        if 'profile' not in session:
+            return redirect('/login')
+        if not session.get('whitelist_verified'):
+            return redirect('/')
+        return function(*args, **kwargs)
+    wrapper.__name__ = function.__name__
+    return wrapper
+
 def register_routes(app):
     """Register all routes with the Flask app."""
     
@@ -116,12 +129,9 @@ def register_routes(app):
             # Set new session data with fresh session ID
             session['profile'] = temp_user_info
             session.permanent = True
+            session['whitelist_verified'] = False  # NEW: Initialize verification flag
             
             logger.info("✓ Session ID regenerated for security")
-            # ============================================================
-            # END SESSION FIXATION PREVENTION
-            # ============================================================
-            
             logger.info("✓ Session created, redirecting to home")
             logger.info("=" * 60)
             return redirect('/')
@@ -138,6 +148,7 @@ def register_routes(app):
     @app.route('/logout')
     def logout():
         session.pop('profile', None)
+        session.pop('whitelist_verified', None)
         return redirect('/')
     #=================================================================
     
@@ -146,6 +157,8 @@ def register_routes(app):
     def verify():
         print('Request for verification page received')
         email = session['profile']['email']
+        # Clear whitelist verification when returning to main page
+        session['whitelist_verified'] = False
         return render_template('verify.html', email=email)
     
     @app.route('/hello', methods=['POST'])
@@ -154,13 +167,17 @@ def register_routes(app):
         name = request.form.get('name')
         if name and name in WHITELIST:
             print(f"Request for hello page received with allowed name={name}")
+            # Set whitelist verification flag in session
+            session['whitelist_verified'] = True
             return render_template('hello.html', name=name)
         else:
             print(f"Request for hello page received with disallowed or blank name={name} -- redirecting")
-            return redirect(url_for('index'))
+            session['whitelist_verified'] = False
+            return redirect(url_for('verify'))
     
     @app.route('/dashboard')
     @login_required
+    @whitelist_name_required  # NEW: Require whitelist name verification
     def dashboard():
         """Display the metrics dashboard."""
         try:
@@ -203,10 +220,7 @@ def register_routes(app):
                 logger.warning("✗ No data provided in request")
                 return jsonify({'error': 'No data provided'}), 400
             
-            # ============================================================
             # API KEY AUTHENTICATION
-            # ============================================================
-            # Check for API key in JSON body or HTTP header
             api_key = data.get('api_key') or request.headers.get('X-API-Key')
             
             if not api_key:
@@ -216,7 +230,6 @@ def register_routes(app):
                     'message': 'Please provide api_key in request body or X-API-Key header'
                 }), 401
             
-            # Validate API key against configured secret
             if api_key != Config.API_SECRET_KEY:
                 logger.warning(f"✗ Invalid API key attempt from {request.remote_addr}")
                 return jsonify({
@@ -224,13 +237,9 @@ def register_routes(app):
                     'message': 'The provided API key is not authorized'
                 }), 403
             
-            # Remove api_key from data before storing (security best practice)
             data.pop('api_key', None)
             
             logger.info(f"✓ API key validated for {request.remote_addr}")
-            # ============================================================
-            # END API KEY AUTHENTICATION
-            # ============================================================
             
             data['received_at'] = datetime.now().isoformat()
             client_id = data.get('client_name') or data.get('client_id') or request.remote_addr
@@ -254,6 +263,7 @@ def register_routes(app):
     
     @app.route('/api/metrics', methods=['GET'])
     @login_required
+    @whitelist_name_required  # NEW: Protected with whitelist verification
     def get_metrics():
         """API endpoint to retrieve stored metrics."""
         try:
@@ -276,6 +286,7 @@ def register_routes(app):
     
     @app.route('/api/clients', methods=['GET'])
     @login_required
+    @whitelist_name_required  # NEW: Protected with whitelist verification
     def get_clients():
         """API endpoint to get list of connected clients."""
         try:
