@@ -110,18 +110,7 @@ def register_routes(app):
             logger.info(f"✓ User info retrieved: {user_info.get('email')}")
             
             user = oauth.google.userinfo()
-            
-            # ============================================================
-            # SESSION FIXATION PREVENTION
-            # ============================================================
-            # Regenerate session ID after successful authentication
-            # This prevents session fixation attacks by invalidating any
-            # pre-existing session ID and creating a new one
-            
-            # Store user info temporarily
             temp_user_info = user_info.copy()
-            
-            # Clear old session and regenerate (works across all Flask versions)
             session.clear()
             
             # Set new session data with fresh session ID
