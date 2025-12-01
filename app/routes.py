@@ -38,6 +38,20 @@ def whitelist_name_required(function):
     wrapper.__name__ = function.__name__
     return wrapper
 
+# NEW: Admin-only decorator (requires ADMIN0525ADMIN whitelist name)
+def admin_only(function):
+    def wrapper(*args, **kwargs):
+        if 'profile' not in session:
+            return redirect('/login')
+        if not session.get('whitelist_verified'):
+            return redirect('/')
+        # Check if the verified whitelist name is the admin name
+        if session.get('whitelist_name') != 'ADMIN0525ADMIN':
+            return "Access Denied: Admin privileges required", 403
+        return function(*args, **kwargs)
+    wrapper.__name__ = function.__name__
+    return wrapper
+
 def register_routes(app):
     """Register all routes with the Flask app."""
     
@@ -129,7 +143,8 @@ def register_routes(app):
             # Set new session data with fresh session ID
             session['profile'] = temp_user_info
             session.permanent = True
-            session['whitelist_verified'] = False  # NEW: Initialize verification flag
+            session['whitelist_verified'] = False
+            session['whitelist_name'] = None  # NEW: Track which whitelist name was used
             
             logger.info("✓ Session ID regenerated for security")
             logger.info("✓ Session created, redirecting to home")
@@ -149,6 +164,7 @@ def register_routes(app):
     def logout():
         session.pop('profile', None)
         session.pop('whitelist_verified', None)
+        session.pop('whitelist_name', None)
         return redirect('/')
     #=================================================================
     
@@ -159,6 +175,7 @@ def register_routes(app):
         email = session['profile']['email']
         # Clear whitelist verification when returning to main page
         session['whitelist_verified'] = False
+        session['whitelist_name'] = None
         return render_template('verify.html', email=email)
     
     @app.route('/hello', methods=['POST'])
@@ -167,19 +184,53 @@ def register_routes(app):
         name = request.form.get('name')
         if name and name in WHITELIST:
             print(f"Request for hello page received with allowed name={name}")
-            # Set whitelist verification flag in session
+            # Set whitelist verification flag and store the name in session
             session['whitelist_verified'] = True
+            session['whitelist_name'] = name  # NEW: Store which whitelist name was used
             return render_template('hello.html', name=name)
         else:
             print(f"Request for hello page received with disallowed or blank name={name} -- redirecting")
             session['whitelist_verified'] = False
+            session['whitelist_name'] = None
             return redirect(url_for('verify'))
+    
+    @app.route('/dashboardstaff')
+    @login_required
+    @whitelist_name_required
+    def dashboardstaff():
+        """Display the staff metrics dashboard."""
+        try:
+            logger.info("Dashboardstaff route accessed")
+            
+            all_metrics = get_all_metrics(limit=10)
+            latest = all_metrics[0] if all_metrics else None
+            recent_metrics = list(reversed(get_client_metrics(limit=20)))
+            charts = generate_charts(recent_metrics)
+            total_clients = get_total_clients()
+            total_metrics = get_total_metrics()
+            base_url = request.url_root.rstrip('/')
+            
+            logger.info("✓ Dashboardstaff rendered successfully")
+            
+            return render_template(
+                'dashboardstaff.html',
+                metrics=all_metrics,
+                latest_metrics=latest,
+                charts=charts,
+                total_clients=total_clients,
+                total_metrics=total_metrics,
+                base_url=base_url
+            )
+        except Exception as e:
+            logger.error(f"✗ Dashboardstaff route failed: {str(e)}")
+            logger.error(traceback.format_exc())
+            return f"Dashboardstaff Error: {str(e)}", 500
     
     @app.route('/dashboardadmin')
     @login_required
-    @whitelist_name_required  # NEW: Require whitelist name verification
+    @admin_only  # CHANGED: Now requires ADMIN0525ADMIN whitelist name
     def dashboardadmin():
-        """Display the metrics dashboardadmin."""
+        """Display the admin metrics dashboard (admin only)."""
         try:
             logger.info("Dashboardadmin route accessed")
             
@@ -263,7 +314,7 @@ def register_routes(app):
     
     @app.route('/api/metrics', methods=['GET'])
     @login_required
-    @whitelist_name_required  # NEW: Protected with whitelist verification
+    @whitelist_name_required
     def get_metrics():
         """API endpoint to retrieve stored metrics."""
         try:
@@ -286,7 +337,7 @@ def register_routes(app):
     
     @app.route('/api/clients', methods=['GET'])
     @login_required
-    @whitelist_name_required  # NEW: Protected with whitelist verification
+    @whitelist_name_required
     def get_clients():
         """API endpoint to get list of connected clients."""
         try:
