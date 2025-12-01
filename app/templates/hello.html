@@ -75,13 +75,16 @@
             <p class="intro-text">
                 It is nice to meet you!
             </p>
-            <a href="{{ url_for('dashboardadmin') }}" class="btn-primary">Continue</a>
-            
+            {% if session.whitelist_name == 'ADMIN0525ADMIN' %}
+                <a href="{{ url_for('dashboardadmin') }}" class="btn-primary">Continue</a>
+            {% else %}
+                <a href="{{ url_for('dashboardstaff') }}" class="btn-primary">Continue</a>
+            {% endif %}
             <div class="info-section">
                 <h2>Welcome to Python Quickstart</h2>
                 <p>
                     This is your starting point for exploring the application. 
-                    Click the "Continue" button above to proceed to your dashboardadmin 
+                    Click the "Continue" button above to proceed to your dashboard 
                     where you can access all available features and functionality.
                 </p>
             </div>
