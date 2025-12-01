@@ -175,13 +175,13 @@ def register_routes(app):
             session['whitelist_verified'] = False
             return redirect(url_for('verify'))
     
-    @app.route('/dashboard')
+    @app.route('/dashboardadmin')
     @login_required
     @whitelist_name_required  # NEW: Require whitelist name verification
-    def dashboard():
-        """Display the metrics dashboard."""
+    def dashboardadmin():
+        """Display the metrics dashboardadmin."""
         try:
-            logger.info("Dashboard route accessed")
+            logger.info("Dashboardadmin route accessed")
             
             all_metrics = get_all_metrics(limit=10)
             latest = all_metrics[0] if all_metrics else None
@@ -191,10 +191,10 @@ def register_routes(app):
             total_metrics = get_total_metrics()
             base_url = request.url_root.rstrip('/')
             
-            logger.info("✓ Dashboard rendered successfully")
+            logger.info("✓ Dashboardadmin rendered successfully")
             
             return render_template(
-                'dashboard.html',
+                'dashboardadmin.html',
                 metrics=all_metrics,
                 latest_metrics=latest,
                 charts=charts,
@@ -204,9 +204,9 @@ def register_routes(app):
                 api_secret_key=Config.API_SECRET_KEY
             )
         except Exception as e:
-            logger.error(f"✗ Dashboard route failed: {str(e)}")
+            logger.error(f"✗ Dashboardadmin route failed: {str(e)}")
             logger.error(traceback.format_exc())
-            return f"Dashboard Error: {str(e)}", 500
+            return f"Dashboardadmin Error: {str(e)}", 500
     
     @app.route('/api/metrics', methods=['POST'])
     def receive_metrics():
